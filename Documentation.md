@@ -28,6 +28,46 @@ Usage:
 auto x = Tensor::constant({1,2,3,4},{2,2});     // {{1,2},{3,4}};
 float y = x.element({1,0})      // 3.0
 ```
+
+### Tensor::getShape
+```cpp
+std::vector<int> getShape()
+```
+
+Returns shape of Tensor object.
+
+Usage:
+```cpp
+auto x = Tensor::constant({1,2,3,4},{2,2});
+std::vector<int> y = x.getShape()       // std::vector({2,2})
+```
+
+### Tensor::getData
+```cpp
+std::vector<float> getData()
+```
+
+Returns the 1D vector representation of data held in Tensor object.
+
+Usage:
+```cpp
+auto x = Tensor::constant({1,2,3,4},{2,2});
+std::vector<float> y = x.getShape()  // std::vector({1,2,3,4})
+```
+
+### Tensor::getSize
+```cpp
+int Tensor::getSize()
+```
+
+Returns the number of elements in 1D vector representation of data held in Tensor object.
+
+Usage:
+```cpp
+auto x = Tensor::constant({1,2,3,4},{2,2});
+int y = x.getSize()     // 4
+```
+
 ___
 
 ### _Standard Tensor Operators_
@@ -65,6 +105,20 @@ auto a = Tensor::constant({1,2,3,4},{2,2});
 auto b = a.mul(5)       // {5,10,15,20};
 ```
 
+### Tensor::modify
+```cpp
+void modify(std::vector<float> newData)
+```
+
+Allows for changing of data of a Tensor object to a new vector value. Sizes (no of elements) of initial and new data must be same.
+
+Usage:
+```cpp
+auto a = Tensor::constant({1,2,3,4},{2,2});
+std::vector<float> d = {5,6,7,8};
+a.modify(d);    // {5,6,7,8}, Shape = {2,2}
+```
+
 ---
 ### _Matrix specific functions_
 ### Tensor::isMat
@@ -98,3 +152,37 @@ auto x = Tensor::constant({1,2,3,4},{2,2});
 float d = x.det();      // -1.99999988
 ```
 ---
+
+### _Random Vector Initializations_
+
+### Tensor::RandomVec
+```cpp
+std::vector<float> RandomVec(int start, int end, int n, int floatFlag)
+```
+
+Returns a random Vector of n elements. Random values range from start to end. If floatFlag = true, float random numbers allowed. Otherwise only integer random numbers.
+
+Usage:
+```cpp
+auto x = Tensor::RandomVec(0,10,6,0);
+// x = std::vector({5,3,2,1,10,4}) as float
+```
+
+### Tensor::RandomTensor
+```cpp
+Tensor RandomTensor(std::vector<int> shape, int start, int end, int floatFlag)
+```
+
+Returns a Tensor with random values and specified shape. Random values range from start to end. If floatFlag = truem float random numbers allowed. Otherwise only integer random numbers.
+
+
+# Data Class
+
+### _Standard Data Processing_
+
+### Data::TrainTestSplit
+
+```cpp
+std::array<std::vector<float>,4> Data::TrainTestSplit(Tensor x, Tensor y, float testSplit)
+```
+W.I.P.
