@@ -68,14 +68,27 @@ auto x = Tensor::constant({1,2,3,4},{2,2});
 int y = x.getSize()     // 4
 ```
 
+### Tensor::change
+```cpp
+void Tensor::change(float val, const std::vector<int>& index);
+```
+Changes value located at index vector to input value. 
+
+Usage:
+```cpp
+auto a = Tensor::constant({1,2,3,4},{2,2});
+a.change(5,{1,1});      // {1,2,3,5} shape = {2,2}
+```
 ___
 
 ### _Standard Tensor Operators_
 ### Operator "+" 
 ```cpp
 Tensor operator+(const Tensor& a)
+Tensor operator+(float a)
 ```
 Returns the sum of two tensors of same dimensions. Throws error if dimensions of input tensors do not match.
+If second value is scalar, adds constant value to all elements of Tensor.
 
 Usage
 ```cpp
@@ -85,11 +98,13 @@ auto c = Tensor::constant({9,8,10},{3,1});
 
 auto x = a + b      // {6,8,10,12} shape = {2,2};
 auto y = a + c      // Invalid 
+auto z = a + 2      // {3,4,5,6} shape = {2,2};
 ```
 
 ### Operator "-"
 ```cpp
 Tensor operator-(const Tensor& a)
+Tensor operator-(float a)
 ```
 Identical to Operator "+" but for subtraction.
 
@@ -117,6 +132,19 @@ Usage:
 auto a = Tensor::constant({1,2,3,4},{2,2});
 std::vector<float> d = {5,6,7,8};
 a.modify(d);    // {5,6,7,8}, Shape = {2,2}
+```
+
+### Tensor::transpose
+```cpp
+Tensor Tensor::transpose(std::vector<int> perm)
+```
+Swaps axises based on input vector perm. Index axis is swapped with value at index axis for all elements in perm. Need not change all axes.
+
+Usage:
+```cpp
+auto a = Tensor::constant({/*data*/},{2,3,4});
+auto b = a.transpose({/*data*/},{1,0,2});    // Shape: {3,2,4}
+auto c = a.transpose({2});      // Shape: {4,2,3}
 ```
 
 ---
@@ -157,7 +185,7 @@ float d = x.det();      // -1.99999988
 
 ### Tensor::RandomVec
 ```cpp
-std::vector<float> RandomVec(int start, int end, int n, int floatFlag)
+static std::vector<float> RandomVec(int start, int end, int n, int floatFlag)
 ```
 
 Returns a random Vector of n elements. Random values range from start to end. If floatFlag = true, float random numbers allowed. Otherwise only integer random numbers.
@@ -170,7 +198,7 @@ auto x = Tensor::RandomVec(0,10,6,0);
 
 ### Tensor::RandomTensor
 ```cpp
-Tensor RandomTensor(std::vector<int> shape, int start, int end, int floatFlag)
+static Tensor RandomTensor(std::vector<int> shape, int start, int end, int floatFlag)
 ```
 
 Returns a Tensor with random values and specified shape. Random values range from start to end. If floatFlag = truem float random numbers allowed. Otherwise only integer random numbers.

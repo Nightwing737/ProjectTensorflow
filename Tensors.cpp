@@ -1,10 +1,10 @@
 #include "Tensors.h"
-
 /*
 Constructor
 */
 Tensor::Tensor(std::vector<float> data, std::vector<int> shape) : data(std::move(data)), shape(std::move(shape)) {
     ismat = (this->shape.size() == 2);
+    computeStrides();
 };
 
 /*
@@ -12,6 +12,29 @@ Returns 1 if Tensor is Matrix (shape is 2 dimensional). Else 0.
 */
 int Tensor::isMat() const{
     return ismat;
+}
+
+void Tensor::computeStrides(){
+    strides.resize(shape.size());
+
+    int stride = 1;
+    for (int i = shape.size() - 1; i >= 0; i--){
+        strides[i] = stride;
+        stride *= shape[i];
+    } 
+    
+}
+
+int Tensor::flatIndex(const std::vector<int>& index){
+    int flat_index = 0;
+
+    for (int i = 0; i < shape.size(); i++){
+        if (index[i] < 0 || index[i] >= shape[i]){
+            throw std::invalid_argument("Index out of bounds");
+        }
+        flat_index += index[i] * strides[i];
+    }
+    return flat_index;
 }
 
 /*
@@ -36,29 +59,27 @@ Tensor Tensor::constant(std::vector<float> data, std::vector<int> shape){
 Accepts int type vector and returns element located at given index. 
 Effectively functions as the [ ] operator for arrays. Uses strides to convert from index array to index for single dimensional vector.
 */
-const float Tensor::element(std::vector<int> index){
+const float Tensor::element(const std::vector<int>& index){
     if (index.size() != shape.size()){
         throw std::invalid_argument("Dimensions do not match");
     }
-    int n = shape.size();
     
-    int flat_index = 0;
-    std::vector<int> strides;
-    int stride = 1;
-
-    for (int x : shape){
-        stride *= x;
-    }
-
-    for (int i = 0; i < shape.size(); i++){
-        if (index[i] < 0 || index[i] >= shape[i]){
-            throw std::invalid_argument("Index out of bounds");
-        }
-        stride = stride/shape[i];
-        flat_index += index[i] * stride;
-    }
+    int flat_index = flatIndex(index);
     return data[flat_index];
 }
+
+/*
+Changes value located at index vector to input value. 
+*/
+void Tensor::change(float val, const std::vector<int>& index){
+    if (index.size() != shape.size()){
+        throw std::invalid_argument("Dimensions do not match");
+    }
+
+    int flat_index = flatIndex(index);
+    data[flat_index] = val;
+}
+
 /*
 Returns the sum of two tensors of same dimensions. Throws error if dimensions of input tensors do not match.
 */
@@ -74,6 +95,17 @@ Tensor Tensor::operator+(const Tensor& a){
         result[i] = data[i] + a.data[i];
     }
     return Tensor(result, shape);
+}
+/*
+Adds constant value to all elements of Tensor.
+*/
+Tensor Tensor::operator+(float a){
+    Tensor result = *this;
+    
+    for (int i = 0; i < result.data.size(); i++){
+        result.data[i] += a;
+    }
+    return *this;
 }
 
 /*
@@ -91,6 +123,20 @@ Tensor Tensor::operator-(const Tensor& a){
     }
     return Tensor(result, shape);
 }
+
+/*
+Subtracts constant value from all elements of Tensor.
+*/
+Tensor Tensor::operator-(float a){
+    Tensor result = *this;
+
+    for (int i = 0; i < result.data.size(); i++){
+        result.data[i] -= a;
+    }
+    return *this;
+}
+
+
 
 /*
 Multiplies all values in tensor with input scalar value.
@@ -181,8 +227,45 @@ float Tensor::det() const{
     throw std::invalid_argument("Cannot find determinant of non matrices");
 }
 
+Tensor Tensor::transpose(std::vector<int> perm){
+    if (perm.size() > shape.size()){
+        throw std::invalid_argument("Invalid permutation size");
+    }
+
+    std::vector<int> used(shape.size(), 0);
+
+    for (int p: perm){
+        if (p < 0 || p >= shape.size() || used[p]){
+            throw std::invalid_argument("Invalid or duplicate axis");
+        }
+        used[p] = 1;
+    }
+
+    std::vector<int> fullPerm = perm;
+    for (int i = 0; i < shape.size(); i++) {
+        if (!used[i]) {
+            fullPerm.push_back(i);
+        }
+    }
+
+    std::vector<int> newShape(shape.size());
+    std::vector<int> newStrides(shape.size());
+
+    for (int i = 0; i < shape.size(); i++) {
+        newShape[i] = shape[fullPerm[i]];
+        newStrides[i] = strides[fullPerm[i]];
+    }
+
+    Tensor result(data, newShape);
+    result.strides = newStrides;
+
+    return result;
+}
+
 void Tensor::print(){
     //TODO: Implement
+
+    
 }
 
 /*
@@ -243,7 +326,7 @@ Returns a Tensor with random values and specified shape. Random values range fro
 If floatFlag = truem float random numbers allowed. Otherwise only integer random numbers.
 */
 Tensor Tensor::RandomTensor(std::vector<int> shape, int start, int end, int floatFlag){
-    int n = getSize();
+    int n = shape.size();
     std::vector<float> v = RandomVec(start, end, n, floatFlag);
     return Tensor(v,shape);
 }
@@ -251,4 +334,6 @@ Tensor Tensor::RandomTensor(std::vector<int> shape, int start, int end, int floa
 
 int main(){
     // Testing purposes
+    Tensor t = Tensor::RandomTensor({4,5,6},0,10,0);
+    t.element({1,3,2});
 }
