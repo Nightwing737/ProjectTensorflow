@@ -77,7 +77,7 @@ void Tensor::change(float val, const std::vector<int>& index){
 /*
 Returns the sum of two tensors of same dimensions. Throws error if dimensions of input tensors do not match.
 */
-Tensor Tensor::operator+(const Tensor& a){
+Tensor Tensor::operator+(const Tensor& a) const{
     
     if (shape != a.shape){
         throw std::invalid_argument("Dimensions do not match");
@@ -93,7 +93,7 @@ Tensor Tensor::operator+(const Tensor& a){
 /*
 Adds constant value to all elements of Tensor.
 */
-Tensor Tensor::operator+(float a){
+Tensor Tensor::operator+(float a) const{
     Tensor result = *this;
     
     for (int i = 0; i < result.data.size(); i++){
@@ -105,7 +105,7 @@ Tensor Tensor::operator+(float a){
 /*
 Returns the difference of two tensors of same dimensions. Throws error if dimensions of input tensors do not match.
 */
-Tensor Tensor::operator-(const Tensor& a){
+Tensor Tensor::operator-(const Tensor& a) const{
     if (shape != a.shape){
         throw std::invalid_argument("Dimensions do not match");
     }
@@ -121,7 +121,7 @@ Tensor Tensor::operator-(const Tensor& a){
 /*
 Subtracts constant value from all elements of Tensor.
 */
-Tensor Tensor::operator-(float a){
+Tensor Tensor::operator-(float a) const{
     Tensor result = *this;
 
     for (int i = 0; i < result.data.size(); i++){
@@ -135,13 +135,21 @@ Tensor Tensor::operator-(float a){
 /*
 Multiplies all values in tensor with input scalar value.
 */
-Tensor Tensor::operator*(float scalar){
+Tensor Tensor::operator*(float scalar) const{
 
     std::vector<float> result(data.size());
     for (int i = 0; i < data.size(); i++){
         result[i] = data[i] * scalar;
     }
     return Tensor(result,shape);
+}
+
+Tensor Tensor::operator*(const Tensor& a) const{
+
+    std::vector<float> result(data.size());
+    for (int i = 0; i < data.size(); i++){
+        result[i] = data[i]*a.data[i];
+    }
 }
 
 /*

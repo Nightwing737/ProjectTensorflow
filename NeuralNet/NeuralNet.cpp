@@ -49,7 +49,7 @@ Layer::Layer(int inputSize, int outputSize)
 Tensor Layer::forward(const Tensor& input){
     inputCache = input;
 
-    Tensor Z = (inputCache.matmul(Weights)) + Bias;
+    Tensor Z = (inputCache*Weights) + Bias;
     outputCache = Z;
 
     return Z.Relu();    
@@ -57,7 +57,7 @@ Tensor Layer::forward(const Tensor& input){
 
 Tensor Layer::back(const Tensor& gradOutput, float learnRate){
     Tensor dZ = gradOutput;
-    dZ = dZ.matmul(outputCache.dRelu());
+    dZ = dZ * (outputCache.dRelu());
 
     Tensor inputT = inputCache.transpose({1,0});
     dWeights = inputT.matmul(dZ);

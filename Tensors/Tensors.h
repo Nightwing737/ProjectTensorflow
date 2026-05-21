@@ -26,11 +26,12 @@ class Tensor{
     int isMat() const;
     const float element(const std::vector<int>& index);
     void change(float val, const std::vector<int>& index);
-    Tensor operator+(const Tensor& a);
-    Tensor operator+(float a);
-    Tensor operator-(const Tensor& a);
-    Tensor operator-(float a);
-    Tensor operator*(float scalar);
+    Tensor operator+(const Tensor& a) const;
+    Tensor operator+(float a) const;
+    Tensor operator-(const Tensor& a) const;
+    Tensor operator-(float a) const;
+    Tensor operator*(float scalar) const;
+    Tensor operator*(const Tensor& a) const;
     Tensor matmul(const Tensor& a);
     float det() const;
     Tensor transpose(std::vector<int> perm);
