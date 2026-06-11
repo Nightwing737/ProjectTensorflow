@@ -1,5 +1,16 @@
 #include "NeuralNet.h"
 
+//* NEURALNET CLASS
+
+/*
+Initializes a feedforward neural network using a layer topology definition.
+
+Accepts a vector topology, where each element defines the number of neurons in a layer.
+Iterates through consecutive pairs of layers:
+topology[i] → input size
+topology[i+1] → output size
+For each pair, constructs a layer and appends it to the network’s layers container.
+*/
 NeuralNet::NeuralNet(const std::vector<int>& topology){
     for (int i = 0; i < topology.size()-1; i++){
         int inputSize = topology[i];
@@ -9,6 +20,15 @@ NeuralNet::NeuralNet(const std::vector<int>& topology){
     }
 }
 
+/*
+Returns Tensor after a single Forward Pass
+
+Takes an input Tensor.
+Initializes activation A with the input.
+Sequentially propagates A through each layer in layers.
+Each layer transforms the tensor via its own forward function.
+
+*/
 Tensor NeuralNet::forward(const Tensor &input){
     Tensor A = input;
 
@@ -19,6 +39,14 @@ Tensor NeuralNet::forward(const Tensor &input){
     return A;
 }
 
+/*
+Calculates the gradient of MSE loss with respect to predictions
+
+Operation: 2(predicted[i]-actual[i])/N
+N = No of elements
+Throws error if shapes differ
+Outputs Tensor of same shape as input with loss gradients
+*/
 Tensor NeuralNet::dMSE(const Tensor& pred, const Tensor& target){
     if (pred.getShape() != target.getShape()){
         throw std::invalid_argument("Shape mismatch");
@@ -35,44 +63,11 @@ Tensor NeuralNet::dMSE(const Tensor& pred, const Tensor& target){
     return Tensor(std::move(grad), pred.getShape());
 }
 
-
-
-
-
-Layer::Layer(int inputSize, int outputSize)
-    : Weights(Tensor::RandomTensor({inputSize, outputSize}, -0.1f, 0.1f)),
-      Bias(Tensor::ZeroTensor({1, outputSize}))
-{
-}
-
-
-Tensor Layer::forward(const Tensor& input){
-    inputCache = input;
-
-    Tensor Z = (inputCache*Weights) + Bias;
-    outputCache = Z;
-
-    return Z.Relu();    
-}
-
-Tensor Layer::back(const Tensor& gradOutput, float learnRate){
-    Tensor dZ = gradOutput;
-    dZ = dZ * (outputCache.dRelu());
-
-    Tensor inputT = inputCache.transpose({1,0});
-    dWeights = inputT.matmul(dZ);
-
-    dBias = dZ.Rowsum();
-
-    Tensor weightsT = Weights.transpose({1,0});
-    Tensor gradInput = dZ.matmul(weightsT);
-
-    Weights = Weights - (dWeights * learnRate);
-    Bias = Bias - (dBias * learnRate);
-
-    return gradInput;   
-}
-
+/*
+Runs inference for forward pass
+Sequentially goes through all layers of NeuralNet 
+Outputs Tensor with final predictions
+*/
 Tensor NeuralNet::predict(const Tensor& input){
     Tensor x = input;
 
@@ -83,6 +78,10 @@ Tensor NeuralNet::predict(const Tensor& input){
     return x;
 }
 
+/*
+Trains NeuralNet using simple Schoastic Gradient Descent
+Throws error if datasize mismatch
+*/
 void NeuralNet::Train(const std::vector<Tensor> &xTrain, const std::vector<Tensor> &yTrain, int epochs, float learnRate){
 
     if (xTrain.size() != yTrain.size()){
@@ -107,4 +106,53 @@ void NeuralNet::Train(const std::vector<Tensor> &xTrain, const std::vector<Tenso
             }
         }
     }
+}
+
+//* LAYER CLASS
+
+
+/*
+Initialises fully connected layer for NN.
+Loads Random Weights and (Initialised) Zero Biases 
+*/
+Layer::Layer(int inputSize, int outputSize)
+    : Weights(Tensor::RandomTensor({inputSize, outputSize}, -0.1f, 0.1f)),
+      Bias(Tensor::ZeroTensor({1, outputSize}))
+{}
+
+/*
+Forward Propagation for one layer.
+inputCache: Input for backprop 
+outputCache: Pre-Activation Input
+*/
+Tensor Layer::forward(const Tensor& input){
+    inputCache = input;
+
+    Tensor Z = (inputCache*Weights) + Bias;
+    outputCache = Z;
+
+    return Z.Relu();    
+}
+
+/*
+Performs backpropagation through layers and updates parameters
+gradOutput: Gradient from next layer
+learnRate: Learning Rate
+*/
+Tensor Layer::back(const Tensor& gradOutput, float learnRate){
+    Tensor dZ = gradOutput;
+    dZ = dZ * (outputCache.dRelu());
+
+    Tensor inputT = inputCache.transpose({1,0});
+    dWeights = inputT.matmul(dZ);
+
+    dBias = dZ.Rowsum();
+
+    Tensor weightsT = Weights.transpose({1,0});
+    Tensor gradInput = dZ.matmul(weightsT);
+
+    Weights = Weights - (dWeights * learnRate);
+    Bias = Bias - (dBias * learnRate);
+
+    return gradInput;   
 }

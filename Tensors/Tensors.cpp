@@ -1,30 +1,5 @@
 #include "Tensors.h"
-/*
-Constructor: Takes a float type vector as data along with shape parameter to define and return multidimensional array (Tensor).
-Also sets internal variable "ismat" to true if input array is a matrix. Throws error if vector cannot be represented in given shape.
-*/
-Tensor::Tensor(std::vector<float> data, std::vector<int> shape) : data(std::move(data)), shape(std::move(shape)) {
-    int expected = 1;
-    for (auto d : shape){
-        if (d <= 0){
-            throw std::invalid_argument("Shape must be positive");
-        }
-        expected *= d;
-    }
-    if (data.size() != expected){
-        throw std::invalid_argument("Dimensions do not match");
-    }   
 
-    ismat = (this->shape.size() == 2);
-    computeStrides();
-};
-
-/*
-Returns 1 if Tensor is Matrix (shape is 2 dimensional). Else 0.
-*/
-int Tensor::isMat() const{
-    return ismat;
-}
 
 void Tensor::computeStrides(){
     strides.resize(shape.size());
@@ -50,6 +25,26 @@ int Tensor::flatIndex(const std::vector<int>& index){
 }
 
 /*
+Constructor: Takes a float type vector as data along with shape parameter to define and return multidimensional array (Tensor).
+Also sets internal variable "ismat" to true if input array is a matrix. Throws error if vector cannot be represented in given shape.
+*/
+Tensor::Tensor(std::vector<float> data, std::vector<int> shape) : data(std::move(data)), shape(std::move(shape)) {
+    int expected = 1;
+    for (auto d : shape){
+        if (d <= 0){
+            throw std::invalid_argument("Shape must be positive");
+        }
+        expected *= d;
+    }
+    if (data.size() != expected){
+        throw std::invalid_argument("Dimensions do not match");
+    }   
+
+    ismat = (this->shape.size() == 2);
+    computeStrides();
+};
+
+/*
 Accepts int type vector and returns element located at given index. 
 Effectively functions as the [ ] operator for arrays. Uses strides to convert from index array to index for single dimensional vector.
 */
@@ -61,6 +56,29 @@ const float Tensor::element(const std::vector<int>& index){
     int flat_index = flatIndex(index);
     return data[flat_index];
 }
+
+/*
+Returns shape of Tensor object.
+*/
+const std::vector<int>& Tensor::getShape() const{
+    return shape;
+}
+
+/*
+Returns the 1D vector representation of data held in Tensor object.
+*/
+const std::vector<float>& Tensor::getData() const{
+    return data;
+}
+
+/*
+Returns the number of elements in 1D vector representation of data 
+held in Tensor object.
+*/
+int Tensor::getSize() const{
+    return data.size();
+}
+
 
 /*
 Changes value located at index vector to input value. 
@@ -131,6 +149,16 @@ Tensor Tensor::operator-(float a) const{
 }
 
 
+/*
+Returns the elementwise product of to tensors of same dimensions. Throws error if dimensions of input tensors do not match.
+*/
+Tensor Tensor::operator*(const Tensor& a) const{
+    
+    std::vector<float> result(data.size());
+    for (int i = 0; i < data.size(); i++){
+        result[i] = data[i]*a.data[i];
+    }
+}
 
 /*
 Multiplies all values in tensor with input scalar value.
@@ -144,12 +172,105 @@ Tensor Tensor::operator*(float scalar) const{
     return Tensor(result,shape);
 }
 
-Tensor Tensor::operator*(const Tensor& a) const{
-
-    std::vector<float> result(data.size());
-    for (int i = 0; i < data.size(); i++){
-        result[i] = data[i]*a.data[i];
+/*
+Swaps axises based on input vector perm. Index axis is swapped with value at index axis for all elements in perm. 
+Need not change all axes.
+*/
+Tensor Tensor::transpose(std::vector<int> perm){
+    if (perm.size() > shape.size()){
+        throw std::invalid_argument("Invalid permutation size");
     }
+
+    std::vector<int> used(shape.size(), 0);
+
+    for (int p: perm){
+        if (p < 0 || p >= shape.size() || used[p]){
+            throw std::invalid_argument("Invalid or duplicate axis");
+        }
+        used[p] = 1;
+    }
+
+    std::vector<int> fullPerm = perm;
+    for (int i = 0; i < shape.size(); i++) {
+        if (!used[i]) {
+            fullPerm.push_back(i);
+        }
+    }
+
+    std::vector<int> newShape(shape.size());
+
+    for (int i = 0; i < shape.size(); i++){
+        newShape[i] = shape[fullPerm[i]];
+    }
+
+    Tensor result(std::vector<float>(data.size(),0),newShape);
+    result.computeStrides();
+
+    const std::vector<int>& oldStrides = strides;
+    const std::vector<int>& newStrides = result.strides;
+
+    for (int i = 0; i < data.size(); i++){
+        int t = i;
+        int oldIndex = 0;
+
+        for (int i = 0; i < shape.size(); i++){
+            int coord = t/newStrides[i];
+            t %= newStrides[i];
+
+            oldIndex += coord * oldStrides[fullPerm[i]];
+        }
+
+        result.data[i] = data[oldIndex];
+    }
+    return result;
+}
+
+/*
+Change Shape. Throws error if shape is impossible to assign.
+*/
+void Tensor::reshape(const std::vector<int>& newShape){
+    int newSize = 1;
+    for (int x : newShape){
+        if (x <= 0){
+            throw std::invalid_argument("Invalid shape dim");
+        }
+        newSize *= x;
+    }
+
+    if (newSize != data.size()){
+        throw std::invalid_argument("Reshape must contain same no of elements");
+    }
+    shape = newShape;
+    computeStrides();
+}
+
+/*
+Returns Sum of Rows of Tensor as a Tensor
+*/
+Tensor Tensor::Rowsum() const{
+    if (shape.size() != 2) {
+        throw std::invalid_argument("sum_rows requires 2D tensor");
+    }
+
+    int rows = shape[0];
+    int cols = shape[1];
+
+    std::vector<float> result(cols, 0.0f);
+
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[j] += data[i * cols + j];
+        }
+    }
+
+    return Tensor(std::move(result), {1, cols});
+}
+
+/*
+Returns 1 if Tensor is Matrix (shape is 2 dimensional). Else 0.
+*/
+int Tensor::isMat() const{
+    return ismat;
 }
 
 /*
@@ -162,7 +283,7 @@ Tensor Tensor::matmul(const Tensor& a){
             int n = shape[1];
             int p = a.shape[1];
             std::vector<float> result(m*p,0);
-
+            
             for (int i = 0; i < m; i++){
                 for (int j = 0; j < p; j++){
                     for (int k = 0; k < n; k++){
@@ -229,123 +350,10 @@ float Tensor::det() const{
     throw std::invalid_argument("Cannot find determinant of non matrices");
 }
 
-Tensor Tensor::transpose(std::vector<int> perm){
-    if (perm.size() > shape.size()){
-        throw std::invalid_argument("Invalid permutation size");
-    }
-
-    std::vector<int> used(shape.size(), 0);
-
-    for (int p: perm){
-        if (p < 0 || p >= shape.size() || used[p]){
-            throw std::invalid_argument("Invalid or duplicate axis");
-        }
-        used[p] = 1;
-    }
-
-    std::vector<int> fullPerm = perm;
-    for (int i = 0; i < shape.size(); i++) {
-        if (!used[i]) {
-            fullPerm.push_back(i);
-        }
-    }
-
-    std::vector<int> newShape(shape.size());
-
-    for (int i = 0; i < shape.size(); i++){
-        newShape[i] = shape[fullPerm[i]];
-    }
-
-    Tensor result(std::vector<float>(data.size(),0),newShape);
-    result.computeStrides();
-
-    const std::vector<int>& oldStrides = strides;
-    const std::vector<int>& newStrides = result.strides;
-
-    for (int i = 0; i < data.size(); i++){
-        int t = i;
-        int oldIndex = 0;
-
-        for (int i = 0; i < shape.size(); i++){
-            int coord = t/newStrides[i];
-            t %= newStrides[i];
-
-            oldIndex += coord * oldStrides[fullPerm[i]];
-        }
-
-        result.data[i] = data[oldIndex];
-    }
-    return result;
-
-}
-
 void Tensor::print(){
     //TODO: Implement
 
     
-}
-
-/*
-Returns shape of Tensor object.
-*/
-const std::vector<int>& Tensor::getShape() const{
-    return shape;
-}
-
-/*
-Returns the 1D vector representation of data held in Tensor object.
-*/
-const std::vector<float>& Tensor::getData() const{
-    return data;
-}
-
-/*
-Returns the number of elements in 1D vector representation of data 
-held in Tensor object.
-*/
-int Tensor::getSize() const{
-    return data.size();
-}
-
-/*
-Chnage Shape
-*/
-void Tensor::reshape(const std::vector<int>& newShape){
-    int newSize = 1;
-    for (int x : newShape){
-        if (x <= 0){
-            throw std::invalid_argument("Invalid shape dim");
-        }
-        newSize *= x;
-    }
-
-    if (newSize != data.size()){
-        throw std::invalid_argument("Reshape must contain same no of elements");
-    }
-    shape = newShape;
-    computeStrides();
-}
-
-/*
-Returns Sum of Rows of Tensor
-*/
-Tensor Tensor::Rowsum() const{
-    if (shape.size() != 2) {
-        throw std::invalid_argument("sum_rows requires 2D tensor");
-    }
-
-    int rows = shape[0];
-    int cols = shape[1];
-
-    std::vector<float> result(cols, 0.0f);
-
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            result[j] += data[i * cols + j];
-        }
-    }
-
-    return Tensor(std::move(result), {1, cols});
 }
 
 /*
@@ -380,6 +388,9 @@ Tensor Tensor::ZeroTensor(std::vector<int> shape){
     return Tensor(v, shape);
 }   
 
+/*
+RELU Activation Function
+*/
 Tensor Tensor::Relu() const{
     std::vector<float> result(data.size());
 
@@ -395,6 +406,9 @@ Tensor Tensor::Relu() const{
     return Tensor(std::move(result),shape);
 }
 
+/*
+Gradient of RELU Activation Function
+*/
 Tensor Tensor::dRelu() const{
     std::vector<float> result(data.size());
 
@@ -407,12 +421,4 @@ Tensor Tensor::dRelu() const{
         }
     }
     return Tensor(std::move(result),shape);
-}
-
-
-int main(){
-    // Testing purposes
-    Tensor t = Tensor::RandomTensor({4,5,6},0,10);
-    t.element({1,3,2});
-    Tensor t2 = Tensor::ZeroTensor({3,2});
 }

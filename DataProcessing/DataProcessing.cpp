@@ -1,5 +1,18 @@
 #include "DataProcessing.h"
+/*
+Splits input feature tensor x and label tensor y into training and testing sets based on a given testSplit ratio.
 
+Behavior
+Extracts raw data from x and y into vectors.
+Independently shuffles both feature and label vectors using a random seed.
+Computes training size as (1 - testSplit) of the total dataset.
+Splits both vectors into:
+Training subset
+Testing subset
+
+Output
+Returns an array of four vectors: xTrain, xTest, yTrain, yTest
+*/
 std::array<std::vector<float>,4> Data::TrainTestSplit(Tensor x, Tensor y, float testSplit){
     int xSize = x.getSize();
     int ySize = y.getSize();
