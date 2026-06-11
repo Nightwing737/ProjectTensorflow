@@ -1,3 +1,3 @@
-Add a print function for Tensors
-Test NeuralNet on multiple inputs
-Update Documentation
+Update Documentation further
+
+Write more test cases
